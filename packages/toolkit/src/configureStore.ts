@@ -7,8 +7,9 @@ import type {
   StoreEnhancer,
   Store,
   Dispatch,
-  PreloadedState,
-  CombinedState,
+  StateFromReducersMapObject,
+  ActionFromReducersMapObject,
+  PreloadedStateFromReducersMapObject,
 } from 'redux'
 import { createStore, compose, applyMiddleware, combineReducers } from 'redux'
 import type { DevToolsEnhancerOptions as DevToolsOptions } from './devtoolsExtension'
@@ -21,9 +22,9 @@ import type {
 } from './getDefaultMiddleware'
 import { curryGetDefaultMiddleware } from './getDefaultMiddleware'
 import type {
-  NoInfer,
   ExtractDispatchExtensions,
   ExtractStoreExtensions,
+  NoInfer,
 } from './tsHelpers'
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
@@ -37,22 +38,59 @@ export type ConfigureEnhancersCallback<E extends Enhancers = Enhancers> = (
   defaultEnhancers: readonly StoreEnhancer[]
 ) => [...E]
 
+export type InferStateFromReducer<
+  R extends Reducer<any, any, any> | ReducersMapObject<any, any, any>
+> = R extends Reducer<infer S, any, any>
+  ? S
+  : R extends ReducersMapObject<any, any, any>
+  ? StateFromReducersMapObject<R>
+  : never
+
+export type InferActionFromReducer<
+  R extends Reducer<any, any, any> | ReducersMapObject<any, any, any>
+> = R extends Reducer<any, infer A, any>
+  ? A
+  : R extends ReducersMapObject<any, any, any>
+  ? ActionFromReducersMapObject<R>
+  : never
+
+export type InferPreloadedStateFromReducer<
+  R extends Reducer<any, any, any> | ReducersMapObject<any, any, any>
+> = R extends Reducer<any, any, infer PreloadedState>
+  ? PreloadedState
+  : R extends ReducersMapObject<any, any, any>
+  ? Partial<PreloadedStateFromReducersMapObject<R>>
+  : never
+
+export type InferReducerFromReducerProperty<
+  R extends Reducer<any, any, any> | ReducersMapObject<any, any, any>
+> = R extends Reducer<any, any, any>
+  ? R
+  : R extends ReducersMapObject<any, any, infer PreloadedState>
+  ? Reducer<
+      StateFromReducersMapObject<R>,
+      ActionFromReducersMapObject<R>,
+      Partial<PreloadedStateFromReducersMapObject<R>>
+    >
+  : never
+
 /**
  * Options for `configureStore()`.
  *
  * @public
  */
 export interface ConfigureStoreOptions<
-  S = any,
-  A extends Action = AnyAction,
-  M extends Middlewares<S> = Middlewares<S>,
+  R extends Reducer<any, any, any> | ReducersMapObject<any, any, any>,
+  M extends Middlewares<InferStateFromReducer<R>> = Middlewares<
+    InferStateFromReducer<R>
+  >,
   E extends Enhancers = Enhancers
 > {
   /**
    * A single reducer function that will be used as the root reducer, or an
    * object of slice reducers that will be passed to `combineReducers()`.
    */
-  reducer: Reducer<S, A> | ReducersMapObject<S, A>
+  reducer: R
 
   /**
    * An array of Redux middleware to install. If not supplied, defaults to
@@ -61,7 +99,13 @@ export interface ConfigureStoreOptions<
    * @example `middleware: (gDM) => gDM().concat(logger, apiMiddleware, yourCustomMiddleware)`
    * @see https://redux-toolkit.js.org/api/getDefaultMiddleware#intended-usage
    */
-  middleware?: ((getDefaultMiddleware: CurriedGetDefaultMiddleware<S>) => M) | M
+  middleware?:
+    | ((
+        getDefaultMiddleware: CurriedGetDefaultMiddleware<
+          InferStateFromReducer<R>
+        >
+      ) => M)
+    | M
 
   /**
    * Whether to enable Redux DevTools integration. Defaults to `true`.
@@ -87,7 +131,7 @@ export interface ConfigureStoreOptions<
     As we cannot distinguish between those two cases without adding another generic parameter,
     we just make the pragmatic assumption that the latter almost never happens.
   */
-  preloadedState?: PreloadedState<CombinedState<NoInfer<S>>>
+  preloadedState?: InferPreloadedStateFromReducer<R> | undefined
 
   /**
    * The store enhancers to apply. See Redux's `createStore()`.
@@ -105,16 +149,17 @@ type Middlewares<S> = ReadonlyArray<Middleware<{}, S>>
 type Enhancers = ReadonlyArray<StoreEnhancer>
 
 export interface ToolkitStore<
-  S = any,
-  A extends Action = AnyAction,
-  M extends Middlewares<S> = Middlewares<S>
-> extends Store<S, A> {
+  R extends Reducer<any, any, any> | ReducersMapObject<any, any, any>,
+  M extends Middlewares<InferStateFromReducer<R>> = Middlewares<
+    InferStateFromReducer<R>
+  >
+> extends Store<InferStateFromReducer<R>, InferActionFromReducer<R>> {
   /**
    * The `dispatch` method of your store, enhanced by all its middlewares.
    *
    * @inheritdoc
    */
-  dispatch: ExtractDispatchExtensions<M> & Dispatch<A>
+  dispatch: ExtractDispatchExtensions<M> & Dispatch<InferActionFromReducer<R>>
 }
 
 /**
@@ -124,11 +169,12 @@ export interface ToolkitStore<
  * @public
  */
 export type EnhancedStore<
-  S = any,
-  A extends Action = AnyAction,
-  M extends Middlewares<S> = Middlewares<S>,
+  R extends Reducer<any, any, any> | ReducersMapObject<any, any, any>,
+  M extends Middlewares<InferStateFromReducer<R>> = Middlewares<
+    InferStateFromReducer<R>
+  >,
   E extends Enhancers = Enhancers
-> = ToolkitStore<S, A, M> & ExtractStoreExtensions<E>
+> = ToolkitStore<R, M> & ExtractStoreExtensions<E>
 
 /**
  * A friendly abstraction over the standard Redux `createStore()` function.
@@ -139,12 +185,14 @@ export type EnhancedStore<
  * @public
  */
 export function configureStore<
-  S = any,
-  A extends Action = AnyAction,
-  M extends Middlewares<S> = [ThunkMiddlewareFor<S>],
+  R extends Reducer<any, any, any> | ReducersMapObject<any, any, any>,
+  M extends Middlewares<InferStateFromReducer<R>> = [
+    ThunkMiddlewareFor<InferStateFromReducer<R>>
+  ],
   E extends Enhancers = [StoreEnhancer]
->(options: ConfigureStoreOptions<S, A, M, E>): EnhancedStore<S, A, M, E> {
-  const curriedGetDefaultMiddleware = curryGetDefaultMiddleware<S>()
+>(options: ConfigureStoreOptions<R, M, E>): EnhancedStore<R, M, E> {
+  const curriedGetDefaultMiddleware =
+    curryGetDefaultMiddleware<InferStateFromReducer<R>>()
 
   const {
     reducer = undefined,
@@ -154,12 +202,12 @@ export function configureStore<
     enhancers = undefined,
   } = options || {}
 
-  let rootReducer: Reducer<S, A>
+  let rootReducer: InferReducerFromReducerProperty<R>
 
   if (typeof reducer === 'function') {
-    rootReducer = reducer
+    rootReducer = reducer as InferReducerFromReducerProperty<R>
   } else if (isPlainObject(reducer)) {
-    rootReducer = combineReducers(reducer) as unknown as Reducer<S, A>
+    rootReducer = combineReducers(reducer) as InferReducerFromReducerProperty<R>
   } else {
     throw new Error(
       '"reducer" is a required argument, and must be a function or an object of functions that can be passed to combineReducers'

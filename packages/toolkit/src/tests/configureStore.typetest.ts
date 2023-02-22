@@ -131,9 +131,13 @@ const _anyMiddleware: any = () => () => () => {}
   })
 
   configureStore({
-    reducer: () => 0,
-    // @ts-expect-error
-    preloadedState: 'non-matching state type',
+    reducer: (
+      { reallImportant }: { reallImportant: number } = { reallImportant: 5 },
+      _: Action
+    ) => ({
+      reallImportant,
+    }),
+    preloadedState: { test: 'thing' },
   })
 }
 
@@ -202,8 +206,8 @@ const _anyMiddleware: any = () => () => () => {}
  * reducer object and a partial preloaded state.
  */
 {
-  let counterReducer1: Reducer<number> = () => 0
-  let counterReducer2: Reducer<number> = () => 0
+  let counterReducer1: Reducer<number, AnyAction, number> = () => 0
+  let counterReducer2: Reducer<number, AnyAction, number> = () => 0
 
   const store = configureStore({
     reducer: {

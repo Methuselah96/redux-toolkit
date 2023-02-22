@@ -1,4 +1,4 @@
-import type { AnyAction, PayloadAction } from '@reduxjs/toolkit'
+import type { PayloadAction } from '@reduxjs/toolkit'
 import {
   combineReducers,
   createAction,
@@ -10,7 +10,6 @@ import {
   prepareAutoBatched,
 } from '@reduxjs/toolkit'
 import type {
-  CombinedState as CombinedQueryState,
   QuerySubstateIdentifier,
   QuerySubState,
   MutationSubstateIdentifier,
@@ -24,7 +23,7 @@ import type {
   ConfigState,
 } from './apiState'
 import { QueryStatus } from './apiState'
-import type { MutationThunk, QueryThunk, RejectedAction } from './buildThunks'
+import type { MutationThunk, QueryThunk } from './buildThunks'
 import { calculateProvidedByThunk } from './buildThunks'
 import type {
   AssertTagTypes,
@@ -469,9 +468,7 @@ export function buildSlice({
     },
   })
 
-  const combinedReducer = combineReducers<
-    CombinedQueryState<any, string, string>
-  >({
+  const combinedReducer = combineReducers({
     queries: querySlice.reducer,
     mutations: mutationSlice.reducer,
     provided: invalidationSlice.reducer,
