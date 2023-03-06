@@ -42,9 +42,9 @@ export type ConfigureEnhancersCallback<E extends Enhancers = Enhancers> = (
 export interface ConfigureStoreOptions<
   S = any,
   A extends Action = AnyAction,
-  PreloadedState = S,
   M extends Middlewares<S> = Middlewares<S>,
-  E extends Enhancers = Enhancers
+  E extends Enhancers = Enhancers,
+  PreloadedState = S
 > {
   /**
    * A single reducer function that will be used as the root reducer, or an
@@ -141,11 +141,11 @@ export type EnhancedStore<
 export function configureStore<
   S = any,
   A extends Action = AnyAction,
-  PreloadedState = S,
   M extends Middlewares<S> = [ThunkMiddlewareFor<S>],
-  E extends Enhancers = [StoreEnhancer]
+  E extends Enhancers = [StoreEnhancer],
+  PreloadedState = S
 >(
-  options: ConfigureStoreOptions<S, A, PreloadedState, M, E>
+  options: ConfigureStoreOptions<S, A, M, E, PreloadedState>
 ): EnhancedStore<S, A, M, E> {
   const curriedGetDefaultMiddleware = curryGetDefaultMiddleware<S>()
 

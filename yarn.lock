@@ -24428,8 +24428,8 @@ fsevents@^1.2.7:
 
 "redux@Methuselah96/redux#head=preloaded-state-generic-4":
   version: 5.0.0-alpha.2
-  resolution: "redux@https://github.com/Methuselah96/redux.git#commit=bd3278b135f451c5ccb692fb47a10687c238301b"
-  checksum: 98fb95c9a3981afe887b680cfd042003f81b16f8d13a1085e1d6952bc5d354e2bcae4c855c2e6f72d08b240e539edf9b2f839ffaf12ad71bdbb253abb97810fd
+  resolution: "redux@https://github.com/Methuselah96/redux.git#commit=d9daf5e5c0173a3083da8f05c1808ac8d87a5b04"
+  checksum: bc37886e4c0dbaf3e39654da3ffd9155b9a89680ae723c8ae88b63eb3f0c1aa880bfbc421da4ea86025a0bb4694db64f00f03c6b37d6fbcb84808f948f858313
   languageName: node
   linkType: hard
 
